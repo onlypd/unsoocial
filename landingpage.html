@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsoocial - Find Real Friends in Surat</title>
+    <meta name="description" content="End boring weekends with Unsoocial. Find genuine, platonic friends in Surat for cafe-hopping, events, and city adventures. Your next friendship starts here.">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: 'hsl(270 80% 60%)',
+                        'primary-foreground': 'hsl(0 0% 100%)',
+                        background: 'hsl(0 0% 100%)',
+                        foreground: 'hsl(270 15% 10%)',
+                        muted: 'hsl(240 6% 95%)',
+                        'muted-foreground': 'hsl(240 10% 50%)',
+                        border: 'hsl(240 5% 88%)',
+                        card: 'hsl(0 0% 98%)',
+                        'card-foreground': 'hsl(270 15% 10%)',
+                    },
+                    keyframes: {
+                        'float': {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' }
+                        },
+                        'float-slow': {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' }
+                        },
+                        'fade-in-up': {
+                            '0%': { opacity: '0', transform: 'translateY(30px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0px)' }
+                        },
+                        'pulse-gentle': {
+                            '0%, 100%': { transform: 'scale(1)', opacity: '0.6' },
+                            '50%': { transform: 'scale(1.1)', opacity: '0.8' }
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'float-slow': 'float-slow 8s ease-in-out infinite',
+                        'fade-in-up': 'fade-in-up 0.8s ease-out forwards',
+                        'pulse-gentle': 'pulse-gentle 4s ease-in-out infinite'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- External Libraries for Map Demo -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster-src.js"></script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .hover-elevate:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .particle-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .demo-user-icon img { border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        .profile-popup { text-align: center; }
+        .profile-popup img { width: 60px; height: 60px; border-radius: 50%; margin-bottom: 10px; }
+        .profile-popup h4 { margin: 0 0 5px 0; font-size: 1.1rem; color: #333; }
+        .profile-popup p { font-size: 0.85rem; margin: 0 0 10px 0; color: #666; max-width: 150px; }
+        .profile-popup .btn { padding: 8px 20px; font-size: 0.9rem; background: linear-gradient(45deg, #8A2BE2, #6A0DAD); color: white; border: none; border-radius: 50px; cursor: pointer; }
+        .leaflet-popup-content-wrapper { border-radius: 10px; }
+        .leaflet-popup-content { margin: 15px !important; }
+        .event-icon-container { font-size: 2rem; text-align: center; line-height: 40px; }
+        .event-popup h4 { font-size: 1.2rem; margin-bottom: 5px; color: #6A0DAD; }
+        .event-popup p { font-size: 0.9rem; margin: 0 0 10px 0; }
+        .friend-request-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: linear-gradient(45deg, #8A2BE2, #6A0DAD); color: white; padding: 10px 20px; border-radius: 20px; z-index: 1000; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; }
+        .chat-message { max-width: 70%; padding: 10px 15px; border-radius: 15px; animation: fadeInMessage 0.5s forwards; }
+        .chat-message.other { background: #e9e9eb; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .chat-message.other .sender { font-weight: 600; color: #6A0DAD; margin-bottom: 5px; font-size: 0.9em; }
+        @keyframes fadeInMessage { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-background text-foreground">
+    <!-- Particle Background -->
+    <canvas id="particles" class="particle-canvas"></canvas>
+
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0">
+                    <button onclick="scrollToSection('hero')" class="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent hover-elevate" data-testid="button-logo">
+                        Unsoocial
+                    </button>
+                </div>
+
+                <!-- Navigation Menu -->
+                <div class="hidden md:block">
+                    <div class="flex items-center space-x-8">
+                        <button onclick="scrollToSection('hero')" class="text-foreground/80 hover:text-foreground transition-colors font-medium" data-testid="link-home">Home</button>
+                        <button onclick="scrollToSection('about')" class="text-foreground/80 hover:text-foreground transition-colors font-medium" data-testid="link-about">About Us</button>
+                        <button onclick="scrollToSection('contact')" class="text-foreground/80 hover:text-foreground transition-colors font-medium" data-testid="link-contact">Contact</button>
+                        <button onclick="window.open('https://t.me/unsoocial1', '_blank')" class="bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium hover-elevate transition-all duration-300" data-testid="button-join-telegram">
+                            Join Community
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mobile menu button -->
+                <div class="md:hidden">
+                    <button onclick="scrollToSection('about')" class="text-foreground hover:text-foreground/80 font-medium" data-testid="button-mobile-menu">
+                        Menu
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero" class="relative min-h-screen flex items-center justify-center overflow-hidden">
+        <!-- Background Gradient -->
+        <div class="absolute inset-0 bg-gradient-to-br from-primary/20 via-purple-500/10 to-white"></div>
+        
+        <!-- Hero Content -->
+        <div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="animate-fade-in-up">
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight">
+                    The End of Boring Weekends 
+                    <span class="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                        is Coming
+                    </span>
+                </h1>
+                
+                <p class="text-xl sm:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
+                    Unsoocial helps you find real, platonic friends in Surat to explore the city with. 
+                    From cafe-hopping to local events, your next adventure is a tap away.
+                </p>
+            </div>
+
+            <!-- CTA Section -->
+            <div class="max-w-md mx-auto space-y-4 animate-fade-in-up" style="animation-delay: 0.2s;">
+                <form id="emailForm" class="flex gap-3">
+                    <input type="email" id="emailInput" placeholder="Enter your email address" required 
+                           class="flex-1 px-4 py-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                           data-testid="input-email">
+                    <button type="submit" 
+                            class="bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover-elevate transition-all duration-300"
+                            data-testid="button-notify">
+                        Notify Me
+                    </button>
+                </form>
+
+                <button id="liveDemoBtn" 
+                        class="w-full border border-primary text-primary px-6 py-3 rounded-lg font-medium hover:bg-primary hover:text-primary-foreground hover-elevate transition-all duration-300"
+                        data-testid="button-live-demo">
+                    🚀 Try Live Demo
+                </button>
+
+                <div id="successMessage" class="text-primary font-semibold opacity-0 transition-opacity duration-500">
+                    Thanks! You're on the list.
+                </div>
+            </div>
+
+            <!-- Floating Elements -->
+            <div class="absolute top-20 left-10 animate-float opacity-30">
+                <div class="w-20 h-20 rounded-full bg-gradient-to-r from-primary to-purple-500"></div>
+            </div>
+            <div class="absolute bottom-20 right-10 animate-float-slow opacity-20">
+                <div class="w-32 h-32 rounded-full bg-gradient-to-r from-purple-400 to-primary"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-24 bg-background">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl sm:text-4xl font-bold text-foreground mb-6">
+                    Why Choose 
+                    <span class="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                        Unsoocial?
+                    </span>
+                </h2>
+                <p class="text-xl text-muted-foreground max-w-3xl mx-auto">
+                    We're building more than just an app – we're creating a community where 
+                    meaningful friendships flourish in the heart of Surat.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="bg-card border border-border/20 rounded-lg p-6 text-center hover-elevate transition-all duration-300" data-testid="card-feature-0">
+                    <div class="flex justify-center mb-4">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-foreground mb-3">Real Connections</h3>
+                    <p class="text-muted-foreground">Meet genuine people looking for platonic friendships, not dates. Quality over quantity, always.</p>
+                </div>
+
+                <div class="bg-card border border-border/20 rounded-lg p-6 text-center hover-elevate transition-all duration-300" data-testid="card-feature-1">
+                    <div class="flex justify-center mb-4">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-foreground mb-3">Local Discovery</h3>
+                    <p class="text-muted-foreground">Explore Surat like never before. From hidden cafes to weekend events, discover your city together.</p>
+                </div>
+
+                <div class="bg-card border border-border/20 rounded-lg p-6 text-center hover-elevate transition-all duration-300" data-testid="card-feature-2">
+                    <div class="flex justify-center mb-4">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-foreground mb-3">Easy Planning</h3>
+                    <p class="text-muted-foreground">Join group activities or create your own. Make weekend plans effortless and exciting.</p>
+                </div>
+
+                <div class="bg-card border border-border/20 rounded-lg p-6 text-center hover-elevate transition-all duration-300" data-testid="card-feature-3">
+                    <div class="flex justify-center mb-4">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-foreground mb-3">Safe Community</h3>
+                    <p class="text-muted-foreground">Verified profiles and community guidelines ensure a safe, welcoming environment for everyone.</p>
+                </div>
+            </div>
+
+            <!-- Stats Section -->
+            <div class="mt-20 text-center">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
+                    <div data-testid="stat-early-users">
+                        <div class="text-4xl font-bold text-primary mb-2">500+</div>
+                        <div class="text-muted-foreground">Early Users Waiting</div>
+                    </div>
+                    <div data-testid="stat-events-planned">
+                        <div class="text-4xl font-bold text-primary mb-2">50+</div>
+                        <div class="text-muted-foreground">Events Already Planned</div>
+                    </div>
+                    <div data-testid="stat-friendships">
+                        <div class="text-4xl font-bold text-primary mb-2">100+</div>
+                        <div class="text-muted-foreground">New Friendships Expected</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-24 bg-gradient-to-br from-primary/5 via-purple-500/5 to-background">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl sm:text-4xl font-bold text-foreground mb-6">
+                    Get in 
+                    <span class="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                        Touch
+                    </span>
+                </h2>
+                <p class="text-xl text-muted-foreground max-w-3xl mx-auto">
+                    Have questions about Unsoocial? Want to partner with us? 
+                    We'd love to hear from you!
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
+                <!-- Contact Form -->
+                <div class="bg-card border border-border/20 rounded-lg p-8">
+                    <form id="contactForm" class="space-y-6">
+                        <input name="name" type="text" placeholder="Your Name" required 
+                               class="w-full px-4 py-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                               data-testid="input-contact-name">
+                        <input name="email" type="email" placeholder="Your Email" required 
+                               class="w-full px-4 py-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                               data-testid="input-contact-email">
+                        <textarea name="message" placeholder="Your Message" required rows="6"
+                                  class="w-full px-4 py-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary bg-background resize-none"
+                                  data-testid="textarea-contact-message"></textarea>
+                        <button type="submit" 
+                                class="w-full bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover-elevate transition-all duration-300 flex items-center justify-center gap-2"
+                                data-testid="button-send-message">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                            </svg>
+                            Send Message
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Contact Info -->
+                <div class="space-y-8">
+                    <div class="bg-card border border-border/20 rounded-lg p-6 hover-elevate transition-all duration-300">
+                        <div class="flex items-center space-x-4">
+                            <div class="bg-primary/10 p-3 rounded-full">
+                                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-foreground">Join Our Community</h3>
+                                <p class="text-muted-foreground">Get updates and connect with early users</p>
+                                <button onclick="window.open('https://t.me/unsoocial1', '_blank')" 
+                                        class="text-primary hover:text-primary/80 font-medium underline"
+                                        data-testid="link-telegram-community">
+                                    Join Telegram Channel →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-card border border-border/20 rounded-lg p-6 hover-elevate transition-all duration-300">
+                        <div class="flex items-center space-x-4">
+                            <div class="bg-primary/10 p-3 rounded-full">
+                                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><path d="m6 8 6 5 6-5"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-foreground">Follow Us</h3>
+                                <p class="text-muted-foreground">Stay updated with our latest news</p>
+                                <button onclick="window.open('https://www.instagram.com/unsoocial_makefriends/', '_blank')"
+                                        class="text-primary hover:text-primary/80 font-medium underline"
+                                        data-testid="link-instagram">
+                                    @unsoocial_makefriends →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-card border border-border/20 rounded-lg p-6 hover-elevate transition-all duration-300">
+                        <div class="flex items-center space-x-4">
+                            <div class="bg-primary/10 p-3 rounded-full">
+                                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-foreground">Direct Contact</h3>
+                                <p class="text-muted-foreground">For partnerships and press inquiries</p>
+                                <button onclick="window.location.href = 'mailto:hello@unsoocial.com'"
+                                        class="text-primary hover:text-primary/80 font-medium underline"
+                                        data-testid="link-email">
+                                    hello@unsoocial.com →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-background border-t border-border/20 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-foreground mb-4">
+                        Don't Miss Out. Get a Head Start.
+                    </h2>
+                    <p class="text-muted-foreground max-w-3xl mx-auto mb-6">
+                        Be the first to know when Unsoocial goes live. Join our exclusive 
+                        broadcast channel for insider news, sneak peeks, and special offers 
+                        reserved only for our founding members.
+                    </p>
+                    <button onclick="window.open('https://t.me/unsoocial1', '_blank')"
+                            class="bg-gradient-to-r from-primary to-purple-600 text-white px-8 py-3 rounded-full font-medium hover-elevate transition-all duration-300"
+                            data-testid="button-footer-join-telegram">
+                        Join the Broadcast Channel
+                    </button>
+                </div>
+
+                <!-- Social Links -->
+                <div class="flex justify-center space-x-6 mb-8">
+                    <button onclick="window.open('https://t.me/unsoocial1', '_blank')"
+                            class="hover-elevate transition-transform duration-200"
+                            data-testid="button-footer-telegram">
+                        <img src="https://cdn-icons-png.flaticon.com/512/2111/2111646.png" alt="Telegram" class="w-8 h-8">
+                    </button>
+                    <button onclick="window.open('https://www.instagram.com/unsoocial_makefriends/', '_blank')"
+                            class="hover-elevate transition-transform duration-200"
+                            data-testid="button-footer-instagram">
+                        <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" class="w-8 h-8">
+                    </button>
+                </div>
+
+                <div class="text-sm text-muted-foreground">
+                    <p>&copy; 2024 Unsoocial. Making Surat more social, one friendship at a time.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Map Demo Modal -->
+    <div id="liveDemoOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-5xl w-full h-[90vh] flex flex-col overflow-hidden">
+            <!-- Header -->
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 id="demoTitle" class="text-xl font-semibold text-gray-900">Unsoocial Live Demo</h3>
+                <button id="demoCloseBtn" class="text-gray-500 hover:text-gray-700 text-2xl font-bold w-8 h-8 flex items-center justify-center">
+                    &times;
+                </button>
+            </div>
+
+            <!-- Navigation -->
+            <div id="demoNavigation" class="hidden px-4 py-2 border-b">
+                <button id="backToMapBtn" class="text-primary hover:text-primary/80 font-medium">
+                    ← Back to Map
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 relative">
+                <div id="mapLoader" class="absolute inset-0 flex items-center justify-center bg-gray-100">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                </div>
+
+                <div id="demoMapWrapper" class="w-full h-full">
+                    <div id="demoMap" class="w-full h-full"></div>
+                    <div id="friendRequestToast" class="friend-request-toast">Friend Request Sent!</div>
+                    <div id="demoEventIconTooltip" class="absolute bottom-28 right-10 bg-white p-2 rounded-lg shadow-lg text-sm font-medium whitespace-nowrap">
+                        Join an event channel!
+                    </div>
+                    <div id="demoEventIcon" class="absolute bottom-8 right-8 w-16 h-16 bg-gradient-to-r from-primary to-purple-600 rounded-full flex items-center justify-center cursor-pointer shadow-lg animate-pulse-gentle">
+                        <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19,4H18V2H16V4H8V2H6V4H5C3.89,4 3,4.9 3,6V20A2,2 0 0,0 5,22H19A2,2 0 0,0 21,20V6C21,4.9 20.1,4 19,4M19,20H5V10H19V20M19,8H5V6H19V8M12,13H17V18H12V13Z"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <div id="demoChannelWrapper" class="hidden w-full h-full flex flex-col">
+                    <div class="bg-gradient-to-r from-primary to-purple-600 text-white p-4 flex items-center space-x-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <div>
+                            <h3 class="font-semibold">🎉 The White Flea - Event Group</h3>
+                            <p class="text-sm opacity-90">15 members</p>
+                        </div>
+                    </div>
+                    <div id="channelMessages" class="flex-1 p-4 space-y-4 overflow-y-auto bg-gray-50"></div>
+                    <div class="p-4 bg-white border-t">
+                        <div class="flex space-x-2">
+                            <input type="text" placeholder="Type your message..." 
+                                   class="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                                   data-testid="input-chat-message">
+                            <button class="bg-primary text-white px-4 py-2 rounded-lg font-medium hover-elevate"
+                                    data-testid="button-send-chat">
+                                Send
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Demo Instructions -->
+            <div id="demoInstructions" class="p-4 bg-gray-50 border-t">
+                <p class="text-sm text-gray-600 text-center">
+                    <strong>Try the demo:</strong> Click on user profiles to send friend requests, 
+                    or click the event marker to join a group chat!
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Particle Background Animation
+        class ParticleBackground {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.animationId = null;
+                this.init();
+            }
+
+            init() {
+                this.resizeCanvas();
+                this.createParticles();
+                this.animate();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+
+            resizeCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            createParticles() {
+                this.particles = [];
+                const particleCount = Math.floor((this.canvas.width * this.canvas.height) / 15000);
+                
+                for (let i = 0; i < particleCount; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5,
+                        size: Math.random() * 3 + 1,
+                        opacity: Math.random() * 0.5 + 0.2,
+                    });
+                }
+            }
+
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.particles.forEach(particle => {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    
+                    if (particle.x < 0) particle.x = this.canvas.width;
+                    if (particle.x > this.canvas.width) particle.x = 0;
+                    if (particle.y < 0) particle.y = this.canvas.height;
+                    if (particle.y > this.canvas.height) particle.y = 0;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    this.ctx.fillStyle = `rgba(255, 255, 255, ${particle.opacity})`;
+                    this.ctx.fill();
+                });
+                
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+
+            destroy() {
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+            }
+        }
+
+        // Map Demo functionality
+        class MapDemo {
+            constructor() {
+                this.map = null;
+                this.currentView = 'map';
+                this.isVisible = false;
+            }
+
+            show() {
+                this.isVisible = true;
+                document.getElementById('liveDemoOverlay').classList.remove('hidden');
+                document.getElementById('liveDemoOverlay').classList.add('flex');
+                document.body.style.overflow = 'hidden';
+                this.initializeMap();
+            }
+
+            hide() {
+                this.isVisible = false;
+                document.getElementById('liveDemoOverlay').classList.add('hidden');
+                document.getElementById('liveDemoOverlay').classList.remove('flex');
+                document.body.style.overflow = 'auto';
+                if (this.map) {
+                    this.map.remove();
+                    this.map = null;
+                }
+                this.currentView = 'map';
+                this.showMapView();
+            }
+
+            initializeMap() {
+                if (!window.L || this.map) return;
+
+                setTimeout(() => {
+                    const mapElement = document.getElementById('demoMap');
+                    if (!mapElement) return;
+
+                    this.map = L.map('demoMap', {
+                        center: [21.1702, 72.8311], // Surat coordinates
+                        zoom: 13,
+                        zoomControl: true,
+                    });
+
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(this.map);
+
+                    this.addUserMarkers();
+                    this.addEventMarker();
+                    
+                    document.getElementById('mapLoader').style.display = 'none';
+                }, 100);
+            }
+
+            addUserMarkers() {
+                const users = [
+                    { name: "Priya Sharma", lat: 21.1658, lng: 72.8347, bio: "Love exploring new cafes! 📚☕", img: "https://images.unsplash.com/photo-1494790108755-2616c6b5e30e?w=60&h=60&fit=crop&crop=face" },
+                    { name: "Arjun Patel", lat: 21.1812, lng: 72.8234, bio: "Weekend hiker and food enthusiast 🥾🍽️", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop&crop=face" },
+                    { name: "Sneha Kumar", lat: 21.1592, lng: 72.8394, bio: "Art lover seeking creative friends 🎨✨", img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=60&h=60&fit=crop&crop=face" },
+                    { name: "Rahul Modi", lat: 21.1734, lng: 72.8456, bio: "Tech geek who loves board games 🎲💻", img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face" }
+                ];
+
+                users.forEach(user => {
+                    const marker = L.marker([user.lat, user.lng], {
+                        icon: L.divIcon({
+                            className: 'demo-user-icon',
+                            html: `<img src="${user.img}" style="width:40px;height:40px;border-radius:50%;border:2px solid white;box-shadow:0 0 10px rgba(0,0,0,0.5);">`,
+                            iconSize: [44, 44],
+                            iconAnchor: [22, 22]
+                        })
+                    }).addTo(this.map);
+
+                    const popupContent = `
+                        <div class="profile-popup">
+                            <img src="${user.img}" style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 10px;">
+                            <h4>${user.name}</h4>
+                            <p>${user.bio}</p>
+                            <button class="send-request-btn btn">Send Friend Request</button>
+                        </div>
+                    `;
+
+                    marker.bindPopup(popupContent);
+                });
+
+                // Handle friend request clicks
+                setTimeout(() => {
+                    document.addEventListener('click', (e) => {
+                        if (e.target.classList.contains('send-request-btn')) {
+                            this.showToast('Friend Request Sent!');
+                        }
+                    });
+                }, 1000);
+            }
+
+            addEventMarker() {
+                const eventMarker = L.marker([21.1705, 72.8289], {
+                    icon: L.divIcon({
+                        className: 'event-marker',
+                        html: '<div style="font-size: 2rem; text-align: center; line-height: 40px;">🎉</div>',
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 20]
+                    })
+                }).addTo(this.map);
+
+                const eventPopup = `
+                    <div style="text-align: center; min-width: 180px;">
+                        <h4 style="font-size: 1.2rem; margin-bottom: 5px; color: #6A0DAD;">The White Flea Market</h4>
+                        <p style="font-size: 0.9rem; margin: 0 0 10px 0;">Sunday, 10 AM - 6 PM</p>
+                        <p style="font-size: 0.85rem; margin: 0 0 15px 0; color: #666;">Join 15 others for shopping and food!</p>
+                        <button class="join-event-btn btn">Join Event Channel</button>
+                    </div>
+                `;
+
+                eventMarker.bindPopup(eventPopup);
+
+                // Handle join event clicks
+                setTimeout(() => {
+                    document.addEventListener('click', (e) => {
+                        if (e.target.classList.contains('join-event-btn')) {
+                            this.showChatView();
+                        }
+                    });
+                }, 1000);
+
+                // Handle event icon click
+                document.getElementById('demoEventIcon').addEventListener('click', () => {
+                    this.showChatView();
+                });
+            }
+
+            showToast(message) {
+                const toast = document.getElementById('friendRequestToast');
+                toast.textContent = message;
+                toast.style.opacity = '1';
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                }, 2000);
+            }
+
+            showChatView() {
+                this.currentView = 'chat';
+                document.getElementById('demoMapWrapper').classList.add('hidden');
+                document.getElementById('demoChannelWrapper').classList.remove('hidden');
+                document.getElementById('demoNavigation').classList.remove('hidden');
+                document.getElementById('demoInstructions').classList.add('hidden');
+                document.getElementById('demoTitle').textContent = 'Event Chat';
+                this.loadChatMessages();
+            }
+
+            showMapView() {
+                this.currentView = 'map';
+                document.getElementById('demoMapWrapper').classList.remove('hidden');
+                document.getElementById('demoChannelWrapper').classList.add('hidden');
+                document.getElementById('demoNavigation').classList.add('hidden');
+                document.getElementById('demoInstructions').classList.remove('hidden');
+                document.getElementById('demoTitle').textContent = 'Unsoocial Live Demo';
+            }
+
+            loadChatMessages() {
+                const messages = [
+                    { sender: "Priya", text: "Hey everyone! Excited for the White Flea market today! 🎉", time: "10:15 AM", isOwn: false },
+                    { sender: "Arjun", text: "Same here! I'll be there by 11. Anyone want to grab breakfast first?", time: "10:18 AM", isOwn: false },
+                    { sender: "Sneha", text: "I'm in for breakfast! There's a great place nearby", time: "10:22 AM", isOwn: false },
+                    { sender: "You", text: "Count me in too! See you all at 10:45?", time: "10:25 AM", isOwn: true }
+                ];
+
+                const container = document.getElementById('channelMessages');
+                container.innerHTML = '';
+
+                messages.forEach((message, index) => {
+                    const messageEl = document.createElement('div');
+                    messageEl.className = `flex ${message.isOwn ? 'justify-end' : 'justify-start'}`;
+                    
+                    const messageContent = `
+                        <div class="max-w-xs px-4 py-2 rounded-lg ${
+                            message.isOwn 
+                                ? 'bg-purple-600 text-white' 
+                                : 'bg-white text-gray-800 shadow-sm'
+                        }">
+                            ${!message.isOwn ? `<p class="text-xs font-semibold text-purple-600 mb-1">${message.sender}</p>` : ''}
+                            <p class="text-sm">${message.text}</p>
+                            <p class="text-xs mt-1 ${message.isOwn ? 'text-white/70' : 'text-gray-500'}">${message.time}</p>
+                        </div>
+                    `;
+                    
+                    messageEl.innerHTML = messageContent;
+                    container.appendChild(messageEl);
+                });
+            }
+        }
+
+        // Initialize components
+        let particleBackground;
+        let mapDemo;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize particle background
+            const canvas = document.getElementById('particles');
+            particleBackground = new ParticleBackground(canvas);
+
+            // Initialize map demo
+            mapDemo = new MapDemo();
+
+            // Navigation scroll effects
+            const navbar = document.getElementById('navbar');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    navbar.classList.remove('bg-transparent');
+                    navbar.classList.add('bg-white/80', 'backdrop-blur-md', 'shadow-sm', 'border-b', 'border-gray-200/10');
+                } else {
+                    navbar.classList.add('bg-transparent');
+                    navbar.classList.remove('bg-white/80', 'backdrop-blur-md', 'shadow-sm', 'border-b', 'border-gray-200/10');
+                }
+            });
+
+            // Email form submission
+            document.getElementById('emailForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const email = document.getElementById('emailInput').value;
+                const successMessage = document.getElementById('successMessage');
+                const submitButton = e.target.querySelector('button[type="submit"]');
+                
+                console.log('Email submitted:', email);
+                
+                submitButton.textContent = '✓ Added!';
+                successMessage.style.opacity = '1';
+                
+                setTimeout(() => {
+                    submitButton.textContent = 'Notify Me';
+                    successMessage.style.opacity = '0';
+                    document.getElementById('emailInput').value = '';
+                }, 3000);
+            });
+
+            // Contact form submission
+            document.getElementById('contactForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData);
+                const submitButton = e.target.querySelector('button[type="submit"]');
+                
+                console.log('Contact form submitted:', data);
+                
+                submitButton.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Sending...';
+                
+                setTimeout(() => {
+                    submitButton.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Message Sent!';
+                    
+                    setTimeout(() => {
+                        submitButton.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Send Message';
+                        e.target.reset();
+                    }, 2000);
+                }, 1000);
+            });
+
+            // Live demo functionality
+            document.getElementById('liveDemoBtn').addEventListener('click', () => {
+                mapDemo.show();
+            });
+
+            document.getElementById('demoCloseBtn').addEventListener('click', () => {
+                mapDemo.hide();
+            });
+
+            document.getElementById('backToMapBtn').addEventListener('click', () => {
+                mapDemo.showMapView();
+            });
+
+            // Close modal on outside click
+            document.getElementById('liveDemoOverlay').addEventListener('click', (e) => {
+                if (e.target.id === 'liveDemoOverlay') {
+                    mapDemo.hide();
+                }
+            });
+        });
+
+        // Smooth scrolling function
+        function scrollToSection(sectionId) {
+            const element = document.getElementById(sectionId);
+            if (element) {
+                element.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (particleBackground) {
+                particleBackground.destroy();
+            }
+        });
+    </script>
+</body>
+</html>
