@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsoocial - Find Real Friends</title>
+    <meta name="description" content="End boring weekends with Unsoocial. Find genuine, platonic friends for cafe-hopping, events, and city adventures. Your next friendship starts here.">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: 'hsl(270 80% 60%)',
+                        'primary-foreground': 'hsl(0 0% 100%)',
+                        background: 'hsl(0 0% 100%)',
+                        foreground: 'hsl(270 15% 10%)',
+                        muted: 'hsl(240 6% 95%)',
+                        'muted-foreground': 'hsl(240 10% 50%)',
+                        border: 'hsl(240 5% 88%)',
+                        card: 'hsl(0 0% 98%)',
+                        'card-foreground': 'hsl(270 15% 10%)',
+                    },
+                    keyframes: {
+                        'float': {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' }
+                        },
+                        'float-slow': {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' }
+                        },
+                        'fade-in-up': {
+                            '0%': { opacity: '0', transform: 'translateY(30px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0px)' }
+                        },
+                        'pulse-gentle': {
+                            '0%, 100%': { transform: 'scale(1)', opacity: '0.6' },
+                            '50%': { transform: 'scale(1.1)', opacity: '0.8' }
+                        },
+                        'cursor-click': { '0%, 100%': { transform: 'scale(1)' }, '50%': { transform: 'scale(0.8)' } }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'float-slow': 'float-slow 8s ease-in-out infinite',
+                        'fade-in-up': 'fade-in-up 0.8s ease-out forwards',
+                        'pulse-gentle': 'pulse-gentle 4s ease-in-out infinite',
+                        'cursor-click': 'cursor-click 0.3s ease-in-out'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .hover-elevate:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .particle-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        
+        /* Styles for the Animated Demo Section */
+        #demoCursor {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="black" stroke-width="1.5"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>');
+            background-size: contain;
+            transition: top 0.7s ease-in-out, left 0.7s ease-in-out;
+            z-index: 50;
+            opacity: 0;
+            transform-origin: top left;
+        }
+        .demo-map-bg {
+            background-color: #1a202c;
+            background-image: linear-gradient(315deg, rgba(255,255,255,0.05) 2px, transparent 2px), linear-gradient(45deg, rgba(255,255,255,0.05) 2px, transparent 2px);
+            background-size: 50px 50px;
+        }
+    </style>
+</head>
+<body class="bg-background text-foreground">
+    <!-- Particle Background -->
+    <canvas id="particles" class="particle-canvas"></canvas>
+
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0">
+                    <button onclick="scrollToSection('hero')" class="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent hover-elevate" data-testid="button-logo">
+                        Unsoocial
+                    </button>
+                </div>
+
+                <!-- Navigation Menu -->
+                <div class="hidden md:block">
+                    <div class="flex items-center space-x-8">
+                        <button onclick="scrollToSection('hero')" class="text-foreground/80 hover:text-foreground transition-colors font-medium" data-testid="link-home">Home</button>
+                        <button onclick="scrollToSection('about')" class="text-foreground/80 hover:text-foreground transition-colors font-medium" data-testid="link-about">About Us</button>
+                        <button onclick="scrollToSection('demo')" class="text-foreground/80 hover:text-foreground transition-colors font-medium" data-testid="link-demo">Demo</button>
+                        <button onclick="scrollToSection('contact')" class="text-foreground/80 hover:text-foreground transition-colors font-medium" data-testid="link-contact">Contact</button>
+                        <button onclick="window.open('https://t.me/unsoocial1', '_blank')" class="bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium hover-elevate transition-all duration-300" data-testid="button-join-telegram">
+                            Join Community
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mobile menu button -->
+                <div class="md:hidden">
+                    <button onclick="scrollToSection('about')" class="text-foreground hover:text-foreground/80 font-medium" data-testid="button-mobile-menu">
+                        Menu
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero" class="relative min-h-screen flex items-center justify-center overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-primary/20 via-purple-500/10 to-white"></div>
+        <div class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="animate-fade-in-up">
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight">
+                    The End of Boring Weekends 
+                    <span class="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                        is Coming
+                    </span>
+                </h1>
+                
+                <p class="text-xl sm:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
+                    Unsoocial helps you find real, platonic friends to explore the city with. 
+                    From cafe-hopping to local events, your next adventure is a tap away.
+                </p>
+            </div>
+
+            <div class="max-w-md mx-auto space-y-4 animate-fade-in-up" style="animation-delay: 0.2s;">
+                <form id="emailForm" class="flex gap-3">
+                    <input type="email" id="emailInput" placeholder="Enter your email address" required 
+                           class="flex-1 px-4 py-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                           data-testid="input-email">
+                    <button type="submit" 
+                            class="bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover-elevate transition-all duration-300"
+                            data-testid="button-notify">
+                        Notify Me
+                    </button>
+                </form>
+                
+                <div id="successMessage" class="text-primary font-semibold opacity-0 transition-opacity duration-500">
+                    Thanks! You're on the list.
+                </div>
+            </div>
+
+            <!-- Floating Elements -->
+            <div class="absolute top-20 left-10 animate-float opacity-30">
+                <div class="w-20 h-20 rounded-full bg-gradient-to-r from-primary to-purple-500"></div>
+            </div>
+            <div class="absolute bottom-20 right-10 animate-float-slow opacity-20">
+                <div class="w-32 h-32 rounded-full bg-gradient-to-r from-purple-400 to-primary"></div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-24 bg-background">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl sm:text-4xl font-bold text-foreground mb-6">
+                    Why Choose 
+                    <span class="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                        Unsoocial?
+                    </span>
+                </h2>
+                <p class="text-xl text-muted-foreground max-w-3xl mx-auto">
+                    We're building more than just an app – we're creating a community where 
+                    meaningful friendships flourish in the heart.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div class="bg-card border border-border/20 rounded-lg p-6 text-center hover-elevate transition-all duration-300" data-testid="card-feature-0">
+                    <div class="flex justify-center mb-4">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-foreground mb-3">Real Connections</h3>
+                    <p class="text-muted-foreground">Meet genuine people looking for platonic friendships, not dates. Quality over quantity, always.</p>
+                </div>
+
+                <div class="bg-card border border-border/20 rounded-lg p-6 text-center hover-elevate transition-all duration-300" data-testid="card-feature-1">
+                    <div class="flex justify-center mb-4">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-foreground mb-3">Local Discovery</h3>
+                    <p class="text-muted-foreground">Explore like never before. From hidden cafes to weekend events, discover your city together.</p>
+                </div>
+
+                <div class="bg-card border border-border/20 rounded-lg p-6 text-center hover-elevate transition-all duration-300" data-testid="card-feature-2">
+                    <div class="flex justify-center mb-4">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-foreground mb-3">Easy Planning</h3>
+                    <p class="text-muted-foreground">Join group activities or create your own. Make weekend plans effortless and exciting.</p>
+                </div>
+
+                <div class="bg-card border border-border/20 rounded-lg p-6 text-center hover-elevate transition-all duration-300" data-testid="card-feature-3">
+                    <div class="flex justify-center mb-4">
+                        <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-foreground mb-3">Safe Community</h3>
+                    <p class="text-muted-foreground">Verified profiles and community guidelines ensure a safe, welcoming environment for everyone.</p>
+                </div>
+            </div>
+
+            <div class="mt-20 text-center">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
+                    <div data-testid="stat-early-users">
+                        <div class="text-4xl font-bold text-primary mb-2">500+</div>
+                        <div class="text-muted-foreground">Early Users Waiting</div>
+                    </div>
+                    <div data-testid="stat-events-planned">
+                        <div class="text-4xl font-bold text-primary mb-2">50+</div>
+                        <div class="text-muted-foreground">Events Already Planned</div>
+                    </div>
+                    <div data-testid="stat-friendships">
+                        <div class="text-4xl font-bold text-primary mb-2">100+</div>
+                        <div class="text-muted-foreground">New Friendships Expected</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Animated Demo Section -->
+    <section id="demo" class="py-24 bg-gradient-to-br from-primary/5 via-purple-500/5 to-background">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl sm:text-4xl font-bold text-foreground mb-6">See Unsoocial in <span class="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Action</span></h2>
+                <p class="text-xl text-muted-foreground max-w-3xl mx-auto">Watch a simulated walkthrough of how easy it is to connect and explore with new friends.</p>
+            </div>
+            
+            <div id="demoContainer" class="max-w-4xl mx-auto bg-gray-800 rounded-xl shadow-2xl p-4 aspect-[16/10] relative overflow-hidden">
+                <div class="absolute top-4 left-4 flex space-x-2">
+                    <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                    <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                </div>
+
+                <div class="demo-map-bg absolute inset-0 transition-opacity duration-500"></div>
+                
+                <div id="demoPriya" class="absolute w-12 h-12" style="top: 35%; left: 40%;">
+                    <img src="https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=1" class="rounded-full border-2 border-white shadow-lg">
+                </div>
+                 <div id="demoRahul" class="absolute w-12 h-12" style="top: 60%; left: 65%;">
+                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face" class="rounded-full border-2 border-white shadow-lg">
+                </div>
+
+                <div id="demoEventIcon" class="absolute w-16 h-16 bg-gradient-to-r from-primary to-purple-600 rounded-full flex items-center justify-center shadow-lg" style="bottom: 5%; right: 5%;">
+                    <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M19,4H18V2H16V4H8V2H6V4H5C3.89,4 3,4.9 3,6V20A2,2 0 0,0 5,22H19A2,2 0 0,0 21,20V6C21,4.9 20.1,4 19,4M19,20H5V10H19V20M19,8H5V6H19V8M12,13H17V18H12V13Z"/></svg>
+                </div>
+                
+                <div id="demoCursor" class="opacity-0"></div>
+                
+                <div id="demoProfileCard" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-lg shadow-xl text-center w-64 opacity-0 scale-90 transition-all duration-300 z-20">
+                    <img src="" class="w-16 h-16 rounded-full mx-auto mb-2 border-2 border-primary">
+                    <h4 class="font-bold"></h4>
+                    <p class="text-sm text-gray-500 mb-3"></p>
+                    <button id="demoAddFriendBtn" class="bg-primary text-primary-foreground w-full py-2 rounded-lg text-sm font-semibold">Add Friend</button>
+                </div>
+
+                <div id="demoToast" class="absolute bottom-5 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-sm px-4 py-2 rounded-full opacity-0 translate-y-4 transition-all duration-300 z-30">Friend Request Sent!</div>
+                
+                <div id="demoChatScreen" class="absolute inset-0 bg-gray-50 flex flex-col opacity-0 transition-opacity duration-500 z-10">
+                    <div class="bg-gradient-to-r from-primary to-purple-600 text-white p-4 font-semibold flex-shrink-0">🎉 The White Flea - Event Group</div>
+                    <div id="demoChatMessages" class="flex-1 p-4 space-y-2 overflow-y-auto"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-24 bg-gradient-to-br from-primary/5 via-purple-500/5 to-background">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl sm:text-4xl font-bold text-foreground mb-6">
+                    Get in 
+                    <span class="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                        Touch
+                    </span>
+                </h2>
+                <p class="text-xl text-muted-foreground max-w-3xl mx-auto">
+                    Have questions about Unsoocial? Want to partner with us? 
+                    We'd love to hear from you!
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
+                <div class="bg-card border border-border/20 rounded-lg p-8">
+                    <form id="contactForm" class="space-y-6">
+                        <input name="name" type="text" placeholder="Your Name" required 
+                               class="w-full px-4 py-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                               data-testid="input-contact-name">
+                        <input name="email" type="email" placeholder="Your Email" required 
+                               class="w-full px-4 py-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                               data-testid="input-contact-email">
+                        <textarea name="message" placeholder="Your Message" required rows="6"
+                                  class="w-full px-4 py-3 rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary bg-background resize-none"
+                                  data-testid="textarea-contact-message"></textarea>
+                        <button type="submit" 
+                                class="w-full bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover-elevate transition-all duration-300 flex items-center justify-center gap-2"
+                                data-testid="button-send-message">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                            </svg>
+                            Send Message
+                        </button>
+                    </form>
+                </div>
+
+                <div class="space-y-8">
+                    <div class="bg-card border border-border/20 rounded-lg p-6 hover-elevate transition-all duration-300">
+                        <div class="flex items-center space-x-4">
+                            <div class="bg-primary/10 p-3 rounded-full">
+                                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-foreground">Join Our Community</h3>
+                                <p class="text-muted-foreground">Get updates and connect with early users</p>
+                                <button onclick="window.open('https://t.me/unsoocial1', '_blank')" 
+                                        class="text-primary hover:text-primary/80 font-medium underline"
+                                        data-testid="link-telegram-community">
+                                    Join Telegram Channel →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-card border border-border/20 rounded-lg p-6 hover-elevate transition-all duration-300">
+                        <div class="flex items-center space-x-4">
+                            <div class="bg-primary/10 p-3 rounded-full">
+                                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><path d="m6 8 6 5 6-5"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-foreground">Follow Us</h3>
+                                <p class="text-muted-foreground">Stay updated with our latest news</p>
+                                <button onclick="window.open('https://www.instagram.com/unsoocial_makefriends/', '_blank')"
+                                        class="text-primary hover:text-primary/80 font-medium underline"
+                                        data-testid="link-instagram">
+                                    @unsoocial_makefriends →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-card border border-border/20 rounded-lg p-6 hover-elevate transition-all duration-300">
+                        <div class="flex items-center space-x-4">
+                            <div class="bg-primary/10 p-3 rounded-full">
+                                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-foreground">Direct Contact</h3>
+                                <p class="text-muted-foreground">For partnerships and press inquiries</p>
+                                <button onclick="window.location.href = 'mailto:hello@unsoocial.com'"
+                                        class="text-primary hover:text-primary/80 font-medium underline"
+                                        data-testid="link-email">
+                                    hello@unsoocial.com →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-background border-t border-border/20 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-foreground mb-4">
+                        Don't Miss Out. Get a Head Start.
+                    </h2>
+                    <p class="text-muted-foreground max-w-3xl mx-auto mb-6">
+                        Be the first to know when Unsoocial goes live. Join our exclusive 
+                        broadcast channel for insider news, sneak peeks, and special offers 
+                        reserved only for our founding members.
+                    </p>
+                    <button onclick="window.open('https://t.me/unsoocial1', '_blank')"
+                            class="bg-gradient-to-r from-primary to-purple-600 text-white px-8 py-3 rounded-full font-medium hover-elevate transition-all duration-300"
+                            data-testid="button-footer-join-telegram">
+                        Join the Broadcast Channel
+                    </button>
+                </div>
+
+                <div class="flex justify-center space-x-6 mb-8">
+                    <button onclick="window.open('https://t.me/unsoocial1', '_blank')"
+                            class="hover-elevate transition-transform duration-200"
+                            data-testid="button-footer-telegram">
+                        <img src="https://cdn-icons-png.flaticon.com/512/2111/2111646.png" alt="Telegram" class="w-8 h-8">
+                    </button>
+                    <button onclick="window.open('https://www.instagram.com/unsoocial_makefriends/', '_blank')"
+                            class="hover-elevate transition-transform duration-200"
+                            data-testid="button-footer-instagram">
+                        <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" class="w-8 h-8">
+                    </button>
+                </div>
+
+                <div class="text-sm text-muted-foreground">
+                    <p>&copy; 2025 Unsoocial. Making more social, one friendship at a time.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Particle Background Animation
+        class ParticleBackground {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.animationId = null;
+                this.init();
+            }
+
+            init() {
+                this.resizeCanvas();
+                this.createParticles();
+                this.animate();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+
+            resizeCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            createParticles() {
+                this.particles = [];
+                const particleCount = Math.floor((this.canvas.width * this.canvas.height) / 15000);
+                
+                for (let i = 0; i < particleCount; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5,
+                        size: Math.random() * 3 + 1,
+                        opacity: Math.random() * 0.5 + 0.2,
+                    });
+                }
+            }
+
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.particles.forEach(particle => {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    
+                    if (particle.x < 0) particle.x = this.canvas.width;
+                    if (particle.x > this.canvas.width) particle.x = 0;
+                    if (particle.y < 0) particle.y = this.canvas.height;
+                    if (particle.y > this.canvas.height) particle.y = 0;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    this.ctx.fillStyle = `rgba(255, 255, 255, ${particle.opacity})`;
+                    this.ctx.fill();
+                });
+                
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+
+            destroy() {
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+            }
+        }
+
+
+        
+        class AutomatedDemo {
+            constructor(containerId) {
+                this.container = document.getElementById(containerId);
+                if (!this.container) return;
+                
+                this.cursor = document.getElementById('demoCursor');
+                this.priya = { el: document.getElementById('demoPriya'), name: 'Priya Sharma', bio: '"Loves exploring new cafes!"', img: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&dpr=1' };
+                this.rahul = { el: document.getElementById('demoRahul'), name: 'Rahul Modi', bio: '"Tech geek who loves board games"', img: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=60&h=60&fit=crop&crop=face' };
+                this.eventIcon = document.getElementById('demoEventIcon');
+                this.profileCard = document.getElementById('demoProfileCard');
+                this.addFriendBtn = document.getElementById('demoAddFriendBtn');
+                this.toast = document.getElementById('demoToast');
+                this.chatScreen = document.getElementById('demoChatScreen');
+                this.chatMessages = document.getElementById('demoChatMessages');
+                
+                this.isRunning = false;
+                this.timeoutId = null;
+
+                const observer = new IntersectionObserver(
+                    (entries) => {
+                        if (entries[0].isIntersecting) {
+                            this.start();
+                        } else {
+                            this.stop();
+                        }
+                    }, { threshold: 0.5 }
+                );
+                observer.observe(this.container);
+            }
+
+            async start() {
+                if (this.isRunning) return;
+                this.isRunning = true;
+                this.runSequenceLoop();
+            }
+
+            async runSequenceLoop() {
+                while (this.isRunning) {
+                    this.reset();
+                    await this.sleep(1000);
+                    this.cursor.style.opacity = '1';
+                    
+                    await this.moveCursorTo(this.priya.el);
+                    await this.clickCursor();
+                    this.showProfileCard(this.priya);
+                    await this.sleep(1000);
+                    
+                    await this.moveCursorTo(this.addFriendBtn);
+                    await this.clickCursor();
+                    this.showToast();
+                    await this.sleep(2000);
+
+                    this.hideProfileCard();
+                    this.hideToast();
+                    await this.sleep(1000);
+
+                    await this.moveCursorTo(this.eventIcon);
+                    await this.clickCursor();
+                    
+                    this.showChatScreen();
+                    await this.sleep(500);
+
+                    await this.showChatMessage('Priya', 'Hey everyone! Excited for the flea market!', false);
+                    await this.showChatMessage('Amit', 'Me too! See you all there.', false);
+                    await this.showChatMessage('You', 'Can\'t wait! On my way.', true);
+                    
+                    if (!this.isRunning) break;
+                    await this.sleep(3000);
+                }
+            }
+
+            stop() {
+                this.isRunning = false;
+                clearTimeout(this.timeoutId);
+                this.reset();
+            }
+            
+            reset() {
+                this.cursor.style.opacity = '0';
+                this.cursor.style.top = '50%';
+                this.cursor.style.left = '50%';
+                this.hideProfileCard();
+                this.hideToast();
+                this.chatScreen.classList.add('opacity-0');
+                this.chatMessages.innerHTML = '';
+            }
+
+            moveCursorTo(element) {
+                const rect = element.getBoundingClientRect();
+                const parentRect = this.container.getBoundingClientRect();
+                this.cursor.style.top = `${rect.top - parentRect.top + (rect.height / 2) - 12}px`;
+                this.cursor.style.left = `${rect.left - parentRect.left + (rect.width / 2) - 12}px`;
+                return this.sleep(800);
+            }
+
+            clickCursor() {
+                this.cursor.classList.add('animate-cursor-click');
+                this.timeoutId = setTimeout(() => this.cursor.classList.remove('animate-cursor-click'), 300);
+                return this.sleep(500);
+            }
+
+            showProfileCard(user) {
+                this.profileCard.querySelector('img').src = user.img;
+                this.profileCard.querySelector('h4').textContent = user.name;
+                this.profileCard.querySelector('p').textContent = user.bio;
+                this.profileCard.classList.remove('opacity-0', 'scale-90');
+            }
+            hideProfileCard() { this.profileCard.classList.add('opacity-0', 'scale-90'); }
+            showToast() { this.toast.classList.remove('opacity-0', 'translate-y-4'); }
+            hideToast() { this.toast.classList.add('opacity-0', 'translate-y-4'); }
+            showChatScreen() { this.chatScreen.classList.remove('opacity-0'); }
+            
+            async showChatMessage(sender, text, isOwn) {
+                await this.sleep(400);
+                const msgEl = document.createElement('div');
+                msgEl.className = `w-fit max-w-xs px-3 py-2 rounded-lg ${isOwn ? 'bg-primary text-white self-end' : 'bg-muted text-foreground self-start'}`;
+                if (!isOwn) {
+                    msgEl.innerHTML = `<div class="text-xs font-bold text-primary">${sender}</div><p>${text}</p>`;
+                } else {
+                    msgEl.textContent = text;
+                }
+                this.chatMessages.appendChild(msgEl);
+                this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+            }
+
+            sleep(ms) {
+                return new Promise(resolve => {
+                    if (!this.isRunning) return resolve();
+                    this.timeoutId = setTimeout(resolve, ms);
+                });
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+             const canvas = document.getElementById('particles');
+             particleBackground = new ParticleBackground(canvas);
+             new AutomatedDemo('demoContainer');
+
+             const navbar = document.getElementById('navbar');
+             window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    navbar.classList.add('bg-white/80', 'backdrop-blur-md', 'shadow-sm');
+                } else {
+                    navbar.classList.remove('bg-white/80', 'backdrop-blur-md', 'shadow-sm');
+                }
+             });
+
+             document.getElementById('emailForm').addEventListener('submit', (e) => {
+                 e.preventDefault();
+                 document.getElementById('successMessage').style.opacity = '1';
+                 setTimeout(() => { document.getElementById('successMessage').style.opacity = '0'; }, 3000);
+             });
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (particleBackground) {
+                particleBackground.destroy();
+            }
+        });
+
+        function scrollToSection(sectionId) {
+            document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
+
