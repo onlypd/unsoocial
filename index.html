@@ -636,24 +636,66 @@
         }
         
         document.addEventListener('DOMContentLoaded', () => {
-             const canvas = document.getElementById('particles');
-             particleBackground = new ParticleBackground(canvas);
-             new AutomatedDemo('demoContainer');
+            const canvas = document.getElementById('particles');
+            particleBackground = new ParticleBackground(canvas);
+            new AutomatedDemo('demoContainer');
+            const navbar = document.getElementById('navbar');
+            window.addEventListener('scroll', () => {
+               if (window.scrollY > 50) {
+                   navbar.classList.add('bg-white/80', 'backdrop-blur-md', 'shadow-sm');
+               } else {
+                   navbar.classList.remove('bg-white/80', 'backdrop-blur-md', 'shadow-sm');
+               }
+            });
 
-             const navbar = document.getElementById('navbar');
-             window.addEventListener('scroll', () => {
-                if (window.scrollY > 50) {
-                    navbar.classList.add('bg-white/80', 'backdrop-blur-md', 'shadow-sm');
-                } else {
-                    navbar.classList.remove('bg-white/80', 'backdrop-blur-md', 'shadow-sm');
-                }
-             });
+            // --- Form Submission Logic ---
+            const emailForm = document.getElementById('emailForm');
+            const emailInput = document.getElementById('emailInput');
+            const submitButton = emailForm.querySelector('button[type="submit"]');
+            const successMessage = document.getElementById('successMessage');
 
-             document.getElementById('emailForm').addEventListener('submit', (e) => {
-                 e.preventDefault();
-                 document.getElementById('successMessage').style.opacity = '1';
-                 setTimeout(() => { document.getElementById('successMessage').style.opacity = '0'; }, 3000);
-             });
+            // !! IMPORTANT: PASTE YOUR GOOGLE APPS SCRIPT URL HERE
+            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2POsyuwbDmFBisbe9i2qade0vwESstCCWHcU59lJOHijkwL_LnzK0sAOMOnSYQVBDmw/exec'; 
+
+            emailForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (submitButton.disabled) return;
+                
+                const email = emailInput.value;
+                submitButton.disabled = true;
+                submitButton.textContent = 'Adding...';
+
+                // Create a JSON payload
+                const payload = { email: email };
+
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Use no-cors for this type of request
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(response => {
+                    // NOTE: Because of 'no-cors', we can't read the response.
+                    // We will assume success and let the Apps Script handle duplicates silently.
+                    successMessage.textContent = "Thanks! You're on the list.";
+                    successMessage.style.opacity = '1';
+                    emailInput.value = '';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    successMessage.textContent = 'Something went wrong. Please try again.';
+                    successMessage.style.opacity = '1';
+                })
+                .finally(() => {
+                    setTimeout(() => {
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Notify Me';
+                        successMessage.style.opacity = '0';
+                    }, 3000);
+                });
+            });
         });
 
         window.addEventListener('beforeunload', () => {
