@@ -384,7 +384,7 @@
                             <div>
                                 <h3 class="font-semibold text-foreground">Follow Us</h3>
                                 <p class="text-muted-foreground">Stay updated with our latest news</p>
-                                <button onclick="window.open('https://www.instagram.com/unsoocial_makefriends/', '_blank')"
+                                <button onclick="window.open('https://www.instagram.com/unsoocial_/', '_blank')"
                                         class="text-primary hover:text-primary/80 font-medium underline"
                                         data-testid="link-instagram">
                                     @unsoocial_makefriends →
@@ -442,7 +442,7 @@
                             data-testid="button-footer-telegram">
                         <img src="https://cdn-icons-png.flaticon.com/512/2111/2111646.png" alt="Telegram" class="w-8 h-8">
                     </button>
-                    <button onclick="window.open('https://www.instagram.com/unsoocial_makefriends/', '_blank')"
+                    <button onclick="window.open('https://www.instagram.com/unsoocial_/', '_blank')"
                             class="hover-elevate transition-transform duration-200"
                             data-testid="button-footer-instagram">
                         <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" class="w-8 h-8">
@@ -714,47 +714,82 @@
             const successMessage = document.getElementById('successMessage');
 
             // !! IMPORTANT: PASTE YOUR GOOGLE APPS SCRIPT URL HERE
-            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2POsyuwbDmFBisbe9i2qade0vwESstCCWHcU59lJOHijkwL_LnzK0sAOMOnSYQVBDmw/exec'; 
+            const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzurk8UZB6et_YGnRXpTvp_7tr9SVLjwH_q_I0MJBZJ-ncalFsyCOCLaNJ140KUZBkGQw/exec'; 
 
-            emailForm.addEventListener('submit', (e) => {
+            emailForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 if (submitButton.disabled) return;
-                
+
                 const email = emailInput.value;
                 submitButton.disabled = true;
                 submitButton.textContent = 'Adding...';
 
-                // Create a JSON payload
-                const payload = { email: email };
-
-                fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors', // Use no-cors for this type of request
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload)
-                })
-                .then(response => {
-                    // NOTE: Because of 'no-cors', we can't read the response.
-                    // We will assume success and let the Apps Script handle duplicates silently.
-                    successMessage.textContent = "Thanks! You're on the list.";
-                    successMessage.style.opacity = '1';
-                    emailInput.value = '';
-                })
-                .catch(error => {
-                    console.error('Error:', error);
+                // 1. Get approximate location from the new service
+                let location = "Unknown";
+                try {
+                    // UPDATED: Switched to ipinfo.io for better reliability
+                    const locationResponse = await fetch('https://ipinfo.io/json');
+                    if (locationResponse.ok) {
+                        const locationData = await locationResponse.json();
+                        // UPDATED: Adjusted for the new API's response format
+                        if (locationData.city && locationData.country) {
+                            location = `${locationData.city}, ${locationData.region}`;
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Could not fetch location, proceeding without it.', error);
+                    // Silently fail, location will remain "Unknown"
+                }
+            
+                // 2. Prepare the data payload with email and location
+                const payload = {
+                    email: email,
+                    location: location
+                };
+            
+                // 3. Submit data to the Google Apps Script
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8', 
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                
+                    if (!response.ok) {
+                        // Note: If you still see errors, it's likely a CORS issue. 
+                        // Re-deploy your Apps Script with "Who has access" set to "Anyone".
+                        throw new Error(`Network response was not ok: ${response.statusText}`);
+                    }
+                
+                    const result = await response.json();
+                
+                    if (result.result === 'success') {
+                        successMessage.textContent = "Thanks! You're on the list.";
+                        successMessage.style.opacity = '1';
+                        emailInput.value = '';
+                    } else if (result.result === 'duplicate') {
+                        successMessage.textContent = 'You are already on the list!';
+                        successMessage.style.opacity = '1';
+                    } else {
+                        throw new Error(result.message || 'An unknown error occurred.');
+                    }
+                
+                } catch (error) {
+                    console.error('Error submitting form:', error);
                     successMessage.textContent = 'Something went wrong. Please try again.';
                     successMessage.style.opacity = '1';
-                })
-                .finally(() => {
+                } finally {
                     setTimeout(() => {
                         submitButton.disabled = false;
                         submitButton.textContent = 'Notify Me';
                         successMessage.style.opacity = '0';
                     }, 3000);
-                });
+                }
             });
+
+
         });
 
         window.addEventListener('beforeunload', () => {
